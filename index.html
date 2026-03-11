@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craiglist Global Master | Full Feature Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .sidebar-link { font-size: 0.7rem; color: #94a3b8; transition: all 0.2s; cursor: pointer; display: block; padding: 4px 8px; border-radius: 6px; }
+        .sidebar-link:hover, .active-cat { color: #818cf8; background: rgba(129, 140, 248, 0.1); transform: translateX(4px); }
+        .hub-card { min-width: 160px; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; border: 2px solid transparent; }
+        .hub-card:hover { transform: translateY(-5px); border-color: #6366f1; }
+        .hub-active { border-color: #22c55e !important; background: rgba(34, 197, 94, 0.05); }
+        .hidden { display: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        #toast { transform: translateY(100px); transition: 0.4s ease; }
+        #toast.show { transform: translateY(0); }
+    </style>
+</head>
+<body class="p-4 lg:p-8">
+
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] glass px-6 py-3 rounded-2xl border-indigo-500/50 flex items-center gap-3">
+        <i data-lucide="check-circle" class="text-green-400"></i>
+        <span id="toastMsg" class="font-bold text-sm uppercase tracking-widest">Listing Published</span>
+    </div>
+
+    <nav class="max-w-[1700px] mx-auto flex flex-col lg:flex-row justify-between items-center mb-8 gap-6">
+        <div class="flex items-center gap-4 cursor-pointer" onclick="location.reload()">
+            <div class="h-12 w-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-2xl italic shadow-2xl">C</div>
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter italic">Craiglist</h1>
+                <p class="text-[9px] tracking-[0.4em] text-indigo-400 font-bold uppercase" id="locDisplay">KERALA HUB</p>
+            </div>
+        </div>
+
+        <div class="glass flex items-center px-5 py-2.5 rounded-2xl w-full max-w-2xl">
+            <i data-lucide="search" class="w-4 h-4 text-slate-500"></i>
+            <input type="text" id="masterSearch" onkeyup="applyFilters()" placeholder="Search titles or categories..." class="bg-transparent w-full px-4 outline-none text-sm">
+        </div>
+
+        <button onclick="openModal()" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black hover:scale-105 transition-all shadow-lg">POST AD</button>
+    </nav>
+
+    <section class="max-w-[1700px] mx-auto mb-10">
+        <div id="hubShelf" class="flex gap-4 overflow-x-auto pb-4 px-2 no-scrollbar">
+            </div>
+    </section>
+
+    <div class="max-w-[1700px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <aside class="lg:col-span-2 space-y-6">
+            <div class="glass rounded-3xl p-5">
+                <h3 class="text-indigo-400 font-black text-[10px] uppercase tracking-widest mb-3">Sections</h3>
+                <div class="space-y-1">
+                    <span class="sidebar-link active-cat" id="cat-all" onclick="setCat('all')">All Listings</span>
+                    <span class="sidebar-link" id="cat-housing" onclick="setCat('housing')">Housing</span>
+                    <span class="sidebar-link" id="cat-jobs" onclick="setCat('jobs')">Jobs</span>
+                    <span class="sidebar-link" id="cat-market" onclick="setCat('market')">For Sale</span>
+                    <span class="sidebar-link" id="cat-community" onclick="setCat('community')">Community</span>
+                </div>
+            </div>
+            
+            <div class="glass rounded-3xl p-5">
+                <h3 class="text-slate-500 font-black text-[10px] uppercase tracking-widest mb-3">Sort By</h3>
+                <select id="sortOrder" onchange="applyFilters()" class="w-full bg-transparent text-xs font-bold text-indigo-400 outline-none">
+                    <option value="newest" class="bg-slate-900">Newest</option>
+                    <option value="price-low" class="bg-slate-900">Price: Low</option>
+                    <option value="price-high" class="bg-slate-900">Price: High</option>
+                </select>
+            </div>
+        </aside>
+
+        <main class="lg:col-span-10">
+            <div class="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
+                <h3 class="text-2xl font-black uppercase italic" id="feedTitle">Kerala Listings</h3>
+                <div class="flex gap-4 items-center">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest" id="resCount">0 Items Found</span>
+                </div>
+            </div>
+            <div id="grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+        </main>
+    </div>
+
+    <div id="postModal" class="hidden fixed inset-0 z-[150] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md">
+        <div class="glass w-full max-w-lg rounded-[40px] p-10 relative">
+            <button onclick="closeModal()" class="absolute top-8 right-8 text-slate-500 hover:text-white"><i data-lucide="x-circle" class="w-8 h-8"></i></button>
+            <h2 class="text-3xl font-black italic uppercase mb-2">Create <span class="text-indigo-400">Post</span></h2>
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-6 italic">Targeting: <span id="modalHub">KERALA</span></p>
+
+            <form id="adForm" class="space-y-4">
+                <div class="h-32 glass border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group">
+                    <input type="file" id="fImg" onchange="readImg(this)" class="absolute inset-0 opacity-0 z-10 cursor-pointer">
+                    <img id="prev" class="hidden absolute inset-0 w-full h-full object-cover">
+                    <div id="upInfo" class="text-center group-hover:scale-110 transition-transform">
+                        <i data-lucide="camera" class="w-8 h-8 text-indigo-400 mx-auto mb-1"></i>
+                        <p class="text-[9px] text-slate-400 uppercase font-black">Upload Photo</p>
+                    </div>
+                </div>
+
+                <input type="text" id="fTitle" placeholder="Title" class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 outline-none focus:border-indigo-500" required>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="number" id="fPrice" placeholder="Price" class="bg-white/5 border border-white/10 rounded-2xl p-4 outline-none" required>
+                    <select id="fCat" class="bg-white/5 border border-white/10 rounded-2xl p-4 outline-none text-slate-400">
+                        <option value="housing">Housing</option>
+                        <option value="jobs">Jobs</option>
+                        <option value="market">For Sale</option>
+                        <option value="community">Community</option>
+                    </select>
+                </div>
+
+                <div class="p-4 glass rounded-2xl border-indigo-500/20 flex justify-between items-center">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Visibility Scope</span>
+                    <select id="fScope" class="bg-transparent text-indigo-400 font-black text-xs outline-none">
+                        <option value="local" class="bg-slate-900">Current Hub Only</option>
+                        <option value="global" class="bg-slate-900">Global Network</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full py-5 bg-indigo-600 rounded-2xl font-black uppercase tracking-widest hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all">Publish Listing</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /** HUB DATA **/
+        const HUBS = [
+            { id: 'KERALA', name: 'Kerala', img: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=400' },
+            { id: 'DUBAI', name: 'Dubai', img: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400' },
+            { id: 'LONDON', name: 'London', img: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400' },
+            { id: 'NEWYORK', name: 'New York', img: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400' },
+            { id: 'TOKYO', name: 'Tokyo', img: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400' }
+        ];
+
+        let curHub = "KERALA";
+        let curCat = "all";
+        let tempImg = "";
+
+        let ads = JSON.parse(localStorage.getItem('cl_global_v4')) || [
+            { id: 1, hub: 'KERALA', cat: 'housing', title: 'Luxury Villa Kochi', price: 45000, scope: 'local', img: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400', date: Date.now() },
+            { id: 2, hub: 'GLOBAL', cat: 'market', title: 'Universal Tech Kit', price: 999, scope: 'global', img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400', date: Date.now() }
+        ];
+
+        /** RENDER FUNCTIONS **/
+        function renderHubs() {
+            const shelf = document.getElementById('hubShelf');
+            shelf.innerHTML = HUBS.map(h => `
+                <div onclick="setHub('${h.id}')" class="hub-card glass rounded-3xl p-3 border-2 ${h.id === curHub ? 'hub-active' : 'border-white/5'}">
+                    <img src="${h.img}" class="w-full h-20 object-cover rounded-2xl mb-2 grayscale-[0.3]">
+                    <p class="text-center font-black text-[9px] uppercase tracking-widest italic">${h.name}</p>
+                </div>
+            `).join('');
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('masterSearch').value.toLowerCase();
+            const sort = document.getElementById('sortOrder').value;
+
+            let filtered = ads.filter(ad => {
+                const inLoc = ad.scope === 'global' || ad.hub === curHub;
+                const inCat = curCat === 'all' || ad.cat === curCat;
+                const inSearch = ad.title.toLowerCase().includes(query);
+                return inLoc && inCat && inSearch;
+            });
+
+            if (sort === 'price-low') filtered.sort((a,b) => a.price - b.price);
+            else if (sort === 'price-high') filtered.sort((a,b) => b.price - a.price);
+            else filtered.sort((a,b) => b.date - a.date);
+
+            document.getElementById('resCount').innerText = `${filtered.length} Items Found`;
+            renderGrid(filtered);
+        }
+
+        function renderGrid(data) {
+            const g = document.getElementById('grid');
+            document.getElementById('locDisplay').innerText = curHub + " HUB";
+            document.getElementById('feedTitle').innerText = `${curHub} Listings`;
+            document.getElementById('modalHub').innerText = curHub;
+
+            g.innerHTML = data.map(ad => `
+                <div class="glass rounded-[35px] p-5 group hover:border-indigo-500/50 transition-all">
+                    <div class="relative rounded-[25px] overflow-hidden h-52 mb-5">
+                        <img src="${ad.img}" class="w-full h-full object-cover">
+                        <span class="absolute top-4 left-4 glass bg-black/60 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+                            ${ad.scope === 'global' ? '🌎 Global' : '📍 ' + ad.hub}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-start mb-4">
+                        <h4 class="font-black text-lg italic tracking-tight truncate pr-4">${ad.title}</h4>
+                        <span class="text-indigo-400 font-black text-lg">₹${ad.price.toLocaleString()}</span>
+                    </div>
+                    <button onclick="del(${ad.id})" class="text-[9px] font-black text-red-500/50 hover:text-red-500 transition-colors uppercase">Delete Listing</button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        /** APP LOGIC **/
+        function setHub(id) { curHub = id; renderHubs(); applyFilters(); }
+        
+        function setCat(cat) { 
+            curCat = cat; 
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active-cat'));
+            document.getElementById('cat-' + cat).classList.add('active-cat');
+            applyFilters(); 
+        }
+
+        function openModal() { document.getElementById('postModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('postModal').classList.add('hidden'); resetForm(); }
+
+        function readImg(input) {
+            const r = new FileReader();
+            r.onload = e => { 
+                tempImg = e.target.result; 
+                document.getElementById('prev').src = tempImg;
+                document.getElementById('prev').classList.remove('hidden');
+                document.getElementById('upInfo').classList.add('hidden');
+            };
+            r.readAsDataURL(input.files[0]);
+        }
+
+        document.getElementById('adForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const scope = document.getElementById('fScope').value;
+            const newAd = {
+                id: Date.now(),
+                hub: scope === 'global' ? 'GLOBAL' : curHub,
+                cat: document.getElementById('fCat').value,
+                title: document.getElementById('fTitle').value,
+                price: parseInt(document.getElementById('fPrice').value),
+                scope: scope,
+                img: tempImg || 'https://via.placeholder.com/500x300/1e293b/ffffff?text=Product',
+                date: Date.now()
+            };
+            ads.unshift(newAd);
+            localStorage.setItem('cl_global_v4', JSON.stringify(ads));
+            showToast("Published Locally!");
+            applyFilters();
+            closeModal();
+        });
+
+        function del(id) {
+            ads = ads.filter(a => a.id !== id);
+            localStorage.setItem('cl_global_v4', JSON.stringify(ads));
+            showToast("Listing Deleted");
+            applyFilters();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function resetForm() {
+            document.getElementById('adForm').reset();
+            tempImg = "";
+            document.getElementById('prev').classList.add('hidden');
+            document.getElementById('upInfo').classList.remove('hidden');
+        }
+
+        // INIT
+        window.onload = () => { renderHubs(); applyFilters(); lucide.createIcons(); };
+    </script>
+</body>
+</html>
